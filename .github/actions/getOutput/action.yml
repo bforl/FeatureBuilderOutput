@@ -1,0 +1,49 @@
+name: "Output the thing!"
+description: "Output a thing"
+
+inputs:
+  output-path:
+    required: true
+    description: "Path to write output file"
+
+runs:
+  using: composite
+
+  steps:
+    - name: Generate unique checkout path
+      shell: bash
+      run: echo "REPO_DIR=output-${{ github.run_id }}-${{ github.job }}" >> $GITHUB_ENV
+        
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        repository: bforl/FeatureBuilder
+        path: ${{ env.REPO_DIR }}
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: "10.0.x"
+
+    - name: List files before
+      working-directory: ${{ env.REPO_DIR }}
+      shell: pwsh
+      run: Get-ChildItem | Select-Object -ExpandProperty FullName
+
+    - name: will output to
+      shell: bash
+      run: echo "${{ inputs.output-path }}"
+
+    - name: Build + Run + Write File
+      working-directory: ${{ env.REPO_DIR }}/Builder
+      shell: bash
+      run: |
+        dotnet restore
+        dotnet build
+        dotnet run "${{ inputs.output-path }}"
+
+    - name: List files after
+      working-directory: ${{ env.REPO_DIR }}
+      shell: pwsh
+      run: Get-ChildItem | Select-Object -ExpandProperty FullName
+
